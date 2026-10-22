@@ -3,13 +3,11 @@
   <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
     <title>WebAR - Quadro Parlante</title>
-    <!-- Librerie A-Frame e MindAR via CDN -->
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
-
+    
     <style>
       body { margin: 0; overflow: hidden; font-family: sans-serif; }
-      /* Schermata di avvio per abilitare la fotocamera e sbloccare l'audio su iOS/Android */
       #overlay {
         position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
         background: rgba(0, 0, 0, 0.88); z-index: 9999;
@@ -24,31 +22,35 @@
     </style>
   </head>
   <body>
-    <!-- Schermata iniziale -->
     <div id="overlay">
       <h2>Esperienza di Realtà Aumentata</h2>
-      <p>Tocca il pulsante per attivare l'esperienza, poi inquadra il quadro con la fotocamera.</p>
+      <p>Tocca per avviare, poi inquadra il dipinto.</p>
       <button id="start-btn">AVVIA ESPERIENZA</button>
     </div>
 
-    <!-- Scena WebAR -->
-    <a-scene
-      mindar-image="imageTargetSrc: ./targets.mind; autoStart: false; uiLoading: no; uiScanning: yes;"
-      color-space="sRGB"
-      renderer="colorManagement: true, physicallyCorrectLights"
-      vr-mode-ui="enabled: false"
+    <a-scene 
+      mindar-image="imageTargetSrc: ./targets.mind; autoStart: false; uiLoading: no; uiScanning: yes;" 
+      color-space="sRGB" 
+      renderer="colorManagement: true, physicallyCorrectLights" 
+      vr-mode-ui="enabled: false" 
       device-orientation-permission-ui="enabled: false">
-
+      
       <a-assets>
-        <!-- Riferimento al tuo video verticale -->
-        <video id="video-asset" src="./prova_01.mp4" preload="auto" loop playsinline webkit-playsinline></video>
+        <video 
+          id="video-asset" 
+          src="./prova_01.mp4" 
+          preload="auto" 
+          loop 
+          playsinline 
+          webkit-playsinline 
+          crossorigin="anonymous"
+          muted>
+        </video>
       </a-assets>
 
       <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-      <!-- Target 0 agganciato a targets.mind -->
       <a-entity id="target-anchor" mindar-image-target="targetIndex: 0">
-        <!-- Piano proporzionato in 9:16 (larghezza 1, altezza 1.778) -->
         <a-plane id="video-plane" src="#video-asset" position="0 0 0" width="1" height="1.778" rotation="0 0 0"></a-plane>
       </a-entity>
     </a-scene>
@@ -60,26 +62,23 @@
       const sceneEl = document.querySelector('a-scene');
       const targetAnchor = document.getElementById('target-anchor');
 
-      // Click obbligatorio per bypassare il blocco autoplay audio su Safari e Chrome mobile
       startBtn.addEventListener('click', () => {
         overlay.style.display = 'none';
-
-        // Inizializza il canale audio
+        
+        // Sblocca il buffer del video sul tocco utente
         video.play().then(() => {
           video.pause();
-          video.currentTime = 0;
-        }).catch(err => console.log('Audio init status:', err));
+        }).catch(err => console.error("Errore autoplay:", err));
 
-        // Avvia il tracking della fotocamera
         sceneEl.systems['mindar-image-system'].start();
       });
 
-      // Avvia la riproduzione non appena il quadro viene riconosciuto
       targetAnchor.addEventListener('targetFound', () => {
+        // Se vuoi l'audio, decommenta la riga sotto:
+        // video.muted = false;
         video.play();
       });
 
-      // Mette in pausa se il visitatore sposta la fotocamera fuori dal quadro
       targetAnchor.addEventListener('targetLost', () => {
         video.pause();
       });
