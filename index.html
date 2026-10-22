@@ -22,22 +22,22 @@
     </style>
   </head>
   <body>
-    <!-- Schermata per sblocco permessi e audio/video -->
+    <!-- Schermata per sblocco audio/video e fotocamera -->
     <div id="overlay">
       <h2>Esperienza di Realtà Aumentata</h2>
-      <p>Premi il pulsante per attivare l'esperienza e inquadra il quadro.</p>
+      <p>Premi il pulsante per attivare audio e fotocamera, poi inquadra il dipinto.</p>
       <button id="start-btn">AVVIA ESPERIENZA</button>
     </div>
 
+    <!-- Parametri di stabilizzazione OneEuroFilter integrati in mindar-image -->
     <a-scene 
-      mindar-image="imageTargetSrc: ./targets.mind; autoStart: false; uiLoading: no; uiScanning: yes;" 
+      mindar-image="imageTargetSrc: ./targets.mind; autoStart: false; uiLoading: no; uiScanning: yes; filterMinCF: 0.0001; filterBeta: 0.001; missTolerance: 5;" 
       color-space="sRGB" 
       renderer="colorManagement: true, physicallyCorrectLights" 
       vr-mode-ui="enabled: false" 
       device-orientation-permission-ui="enabled: false">
       
       <a-assets>
-        <!-- Video con parametri obbligatori per browser mobile -->
         <video 
           id="video-asset" 
           src="./Prova_001.mp4" 
@@ -45,16 +45,13 @@
           loop 
           playsinline 
           webkit-playsinline 
-          crossorigin="anonymous"
-          muted>
+          crossorigin="anonymous">
         </video>
       </a-assets>
 
       <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
       <a-entity id="target-anchor" mindar-image-target="targetIndex: 0">
-        <!-- material="shader: flat" impedisce che il piano diventi nero per assenza di luci -->
-        <!-- visible="false" parte nascosto e compare solo su targetFound -->
         <a-plane 
           id="video-plane" 
           src="#video-asset" 
@@ -79,25 +76,34 @@
       startBtn.addEventListener('click', () => {
         overlay.style.display = 'none';
 
-        // Avvio immediato sul tocco utente: sblocca il decoder video e l'audio
+        // Sblocca il canale audio e avvia il flusso del video sul tocco dell'utente
+        video.muted = false;
+        video.volume = 1.0;
+        
         video.play().then(() => {
-          // Se desideri attivare l'audio, togli il commento alla riga successiva:
-          // video.muted = false;
-        }).catch(err => console.error("Playback error:", err));
+          // Si mette subito in pausa in attesa che l'utente inquadri il quadro
+          video.pause();
+        }).catch(err => {
+          console.warn("Fallback autoplay audio:", err);
+          // In caso di policy restrittive estreme, parte muto
+          video.muted = true;
+          video.play();
+          video.pause();
+        });
 
-        // Avvia la fotocamera e l'image tracking
+        // Avvia il tracking della fotocamera
         sceneEl.systems['mindar-image-system'].start();
       });
 
-      // Quando inquadri il quadro: mostra il piano e resetta il video all'inizio
+      // Target trovato: mostra il piano e riprende da dove si era interrotto
       targetAnchor.addEventListener('targetFound', () => {
         plane.setAttribute('visible', true);
-        video.currentTime = 0;
         video.play();
       });
 
-      // Se sposti il telefono: nascondi il piano
+      // Target perso: mette in pausa video e audio e nasconde il piano
       targetAnchor.addEventListener('targetLost', () => {
+        video.pause();
         plane.setAttribute('visible', false);
       });
     </script>
