@@ -10,21 +10,22 @@
       body { margin: 0; overflow: hidden; font-family: sans-serif; }
       #overlay {
         position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-        background: rgba(0, 0, 0, 0.88); z-index: 9999;
+        background: rgba(0, 0, 0, 0.9); z-index: 9999;
         display: flex; flex-direction: column; justify-content: center; align-items: center;
         color: white; text-align: center; padding: 24px; box-sizing: border-box;
       }
       #start-btn {
-        margin-top: 24px; padding: 16px 36px; font-size: 17px; font-weight: bold;
+        margin-top: 24px; padding: 16px 36px; font-size: 18px; font-weight: bold;
         background-color: #ffffff; color: #000000; border: none; border-radius: 30px;
-        cursor: pointer; box-shadow: 0 4px 15px rgba(255, 255, 255, 0.25);
+        cursor: pointer; box-shadow: 0 4px 15px rgba(255, 255, 255, 0.3);
       }
     </style>
   </head>
   <body>
+    <!-- Schermata per sblocco permessi e audio/video -->
     <div id="overlay">
       <h2>Esperienza di Realtà Aumentata</h2>
-      <p>Tocca per avviare, poi inquadra il dipinto.</p>
+      <p>Premi il pulsante per attivare l'esperienza e inquadra il quadro.</p>
       <button id="start-btn">AVVIA ESPERIENZA</button>
     </div>
 
@@ -36,6 +37,7 @@
       device-orientation-permission-ui="enabled: false">
       
       <a-assets>
+        <!-- Video con parametri obbligatori per browser mobile -->
         <video 
           id="video-asset" 
           src="./Prova_001.mp4" 
@@ -51,7 +53,18 @@
       <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
       <a-entity id="target-anchor" mindar-image-target="targetIndex: 0">
-        <a-plane id="video-plane" src="#video-asset" position="0 0 0" width="1" height="1.778" rotation="0 0 0"></a-plane>
+        <!-- material="shader: flat" impedisce che il piano diventi nero per assenza di luci -->
+        <!-- visible="false" parte nascosto e compare solo su targetFound -->
+        <a-plane 
+          id="video-plane" 
+          src="#video-asset" 
+          position="0 0 0" 
+          width="1" 
+          height="1.778" 
+          rotation="0 0 0"
+          material="shader: flat;"
+          visible="false">
+        </a-plane>
       </a-entity>
     </a-scene>
 
@@ -59,28 +72,33 @@
       const overlay = document.getElementById('overlay');
       const startBtn = document.getElementById('start-btn');
       const video = document.getElementById('video-asset');
+      const plane = document.getElementById('video-plane');
       const sceneEl = document.querySelector('a-scene');
       const targetAnchor = document.getElementById('target-anchor');
 
       startBtn.addEventListener('click', () => {
         overlay.style.display = 'none';
-        
-        // Sblocca il buffer del video sul tocco utente
-        video.play().then(() => {
-          video.pause();
-        }).catch(err => console.error("Errore autoplay:", err));
 
+        // Avvio immediato sul tocco utente: sblocca il decoder video e l'audio
+        video.play().then(() => {
+          // Se desideri attivare l'audio, togli il commento alla riga successiva:
+          // video.muted = false;
+        }).catch(err => console.error("Playback error:", err));
+
+        // Avvia la fotocamera e l'image tracking
         sceneEl.systems['mindar-image-system'].start();
       });
 
+      // Quando inquadri il quadro: mostra il piano e resetta il video all'inizio
       targetAnchor.addEventListener('targetFound', () => {
-        // Se vuoi l'audio, decommenta la riga sotto:
-        // video.muted = false;
+        plane.setAttribute('visible', true);
+        video.currentTime = 0;
         video.play();
       });
 
+      // Se sposti il telefono: nascondi il piano
       targetAnchor.addEventListener('targetLost', () => {
-        video.pause();
+        plane.setAttribute('visible', false);
       });
     </script>
   </body>
